@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>KUROKO | Script API</title>
+<style>
+:root{color-scheme:dark;--bg:#090c12;--panel:#121824;--line:#273247;--text:#edf2ff;--muted:#9ba8bd;--green:#9be6b0;--red:#ff9f9f}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 80% 0,#18243a 0,transparent 35%),var(--bg);color:var(--text);font:15px system-ui,Arial}
+.wrap{max-width:1050px;margin:auto;padding:20px}.top{display:flex;justify-content:space-between;align-items:center;gap:12px;border-bottom:1px solid var(--line);padding:14px 0 20px}
+h1{font-size:23px;margin:0}h2{font-size:17px;margin:0 0 10px}.muted{color:var(--muted)}.panel{background:rgba(18,24,36,.95);border:1px solid var(--line);border-radius:16px;padding:18px;margin-top:15px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-top:15px}.metric{font-size:28px;font-weight:800;margin-top:7px}
+input,select{width:100%;background:#0b111c;border:1px solid #344058;color:var(--text);padding:12px;border-radius:10px;margin:5px 0}
+button{background:var(--green);border:0;border-radius:10px;padding:11px 15px;color:#102019;font-weight:800;cursor:pointer}button.secondary{background:#303b50;color:#fff}button.danger{background:#562d34;color:#ffd7d7}
+.row{display:flex;gap:9px;flex-wrap:wrap;align-items:center}.row>*{flex:1;min-width:130px}.hidden{display:none!important}
+.msg{padding:11px;border-radius:10px;margin:12px 0;background:#1c2c25;color:#c7f8d5}.error{background:#40262b;color:#ffd1d1}
+table{width:100%;border-collapse:collapse;min-width:600px}th,td{text-align:right;padding:11px;border-bottom:1px solid var(--line);vertical-align:top}th{color:var(--muted)}.scroll{overflow:auto}.tag{display:inline-block;padding:4px 9px;background:#273448;border-radius:30px;font-size:12px}
+code{overflow-wrap:anywhere;color:#b7d4ff}.small{font-size:12px}
+</style>
+</head><body><div class="wrap">
+<header class="top"><div><h1>KUROKO <span class="muted">/ Script API</span></h1><div class="muted small">لوحة إدارة خاصة • مفاتيح • سجل التفعيلات</div></div><button id="logout" class="secondary hidden">تسجيل خروج</button></header>
+<section id="setup" class="panel">
+<h2>إعداد الاتصال لأول مرة</h2>
+<p class="muted">هاي واجهة الموقع. حتى يصير تسجيل الدخول والمفاتيح حقيقية، لازم تربط Worker API من ملف README. لا تكتب كلمة مرورك هنا إذا ما عندك Backend منشور.</p>
+<label>رابط API (Cloudflare Worker)</label><input id="apiUrl" placeholder="https://your-api.yourname.workers.dev">
+<button id="saveApi">حفظ رابط API</button>
+</section>
+<section id="loginPanel" class="panel">
+<h2>دخول المالك</h2><p class="muted">الدخول يتحقق من السيرفر، مو من المتصفح.</p>
+<label>اسم المستخدم</label><input id="username" autocomplete="username" placeholder="owner">
+<label>كلمة المرور</label><input id="password" type="password" autocomplete="current-password">
+<button id="loginBtn">دخول لوحة الإدارة</button><div id="loginMsg"></div>
+</section>
+<section id="dashboard" class="hidden">
+<div class="grid">
+<div class="panel"><div class="muted">كل المفاتيح</div><div id="total" class="metric">—</div></div>
+<div class="panel"><div class="muted">المفاتيح الفعالة</div><div id="active" class="metric">—</div></div>
+<div class="panel"><div class="muted">طلبات التفعيل</div><div id="activationsCount" class="metric">—</div></div>
+</div>
+<div class="panel"><h2>إنشاء مفتاح</h2><div class="row"><input id="label" placeholder="اسم أو ملاحظة للمفتاح"><select id="kind"><option value="temporary">مؤقت</option><option value="permanent">دائم</option></select><select id="hours"><option value="1">ساعة</option><option value="24" selected>24 ساعة</option><option value="72">3 أيام</option><option value="168">7 أيام</option><option value="720">30 يوم</option></select><button id="createKey">إنشاء</button></div><div id="keyMsg"></div></div>
+<div class="panel"><h2>رابط API</h2><p><code>/api/activate</code> للتحقق والتسجيل</p><p><code>/api/script</code> لإرجاع السكربت بعد التحقق من المفتاح</p><p class="muted small">الموقع وحده مو كافي؛ لازم تنشر الـ Worker وتضبط الأسرار وقاعدة البيانات.</p></div>
+<div class="panel"><h2>المفاتيح</h2><div class="scroll"><table><thead><tr><th>الاسم / بادئة المفتاح</th><th>النوع</th><th>تاريخ الإنشاء</th><th>الانتهاء</th><th>الحالة</th><th>الإجراء</th></tr></thead><tbody id="keysBody"><tr><td colspan="6" class="muted">سجّل الدخول لتحميل البيانات.</td></tr></tbody></table></div></div>
+<div class="panel"><h2>سجل التفعيلات</h2><div class="scroll"><table><thead><tr><th>الوقت</th><th>المفتاح</th><th>معرّف العميل</th><th>النتيجة</th></tr></thead><tbody id="logsBody"></tbody></table></div><p class="muted small">معرّف العميل يرسله العميل وقد يكون مزيفاً؛ لا يعني أنه يثبت هوية حساب Roblox.</p></div>
+</section>
+</div>
+<script>
+const $=id=>document.getElementById(id);
+let api=localStorage.getItem("ku_api")||"", token=sessionStorage.getItem("ku_token")||"";
+$("apiUrl").value=api;
+function showMsg(id,text,error=false){$(id).innerHTML="";const d=document.createElement("div");d.className="msg"+(error?" error":"");d.textContent=text;$(id).appendChild(d)}
+async function call(path,body={},method="POST"){
+ if(!api) throw Error("أدخل رابط API أولاً");
+ const r=await fetch(api.replace(/\/$/,"")+path,{method,headers:{"Content-Type":"application/json",...(token?{"Authorization":"Bearer "+token}:{})},...(method==="GET"?{}:{body:JSON.stringify(body)})});
+ const data=await r.json().catch(()=>({}));
+ if(!r.ok) throw Error(data.error||"فشل الطلب ("+r.status+")");
+ return data;
+}
+function setLogged(v){$("dashboard").classList.toggle("hidden",!v);$("loginPanel").classList.toggle("hidden",v);$("logout").classList.toggle("hidden",!v);if(v)refresh()}
+$("saveApi").onclick=()=>{api=$("apiUrl").value.trim().replace(/\/$/,"");localStorage.setItem("ku_api",api);showMsg("loginMsg","تم حفظ رابط API بهذا المتصفح.")};
+$("loginBtn").onclick=async()=>{try{const d=await call("/api/admin/login",{username:$("username").value,password:$("password").value});token=d.token;sessionStorage.setItem("ku_token",token);showMsg("loginMsg","تم تسجيل الدخول.");setLogged(true)}catch(e){showMsg("loginMsg",e.message,true)}};
+$("logout").onclick=()=>{token="";sessionStorage.removeItem("ku_token");setLogged(false)};
+$("createKey").onclick=async()=>{try{const d=await call("/api/admin/keys",{label:$("label").value,kind:$("kind").value,hours:Number($("hours").value)});showMsg("keyMsg","المفتاح الجديد (انسخه الآن): "+d.key);await refresh()}catch(e){showMsg("keyMsg",e.message,true)}};
+async function refresh(){try{const d=await call("/api/admin/dashboard",{});$("total").textContent=d.stats.total;$("active").textContent=d.stats.active;$("activationsCount").textContent=d.stats.activations;
+$("keysBody").innerHTML="";for(const k of d.keys){const tr=document.createElement("tr");[k.label||"—",k.prefix+"…",k.kind,k.created,k.expires,k.status].forEach((v,i)=>{if(i===1)return;const td=document.createElement("td");td.textContent=v;tr.appendChild(td)});const td=document.createElement("td");if(!k.revoked){const b=document.createElement("button");b.className="danger";b.textContent="إلغاء";b.onclick=async()=>{try{await call("/api/admin/keys/"+k.id+"/revoke",{});refresh()}catch(e){alert(e.message)}};td.appendChild(b)}tr.appendChild(td);$("keysBody").appendChild(tr)}
+$("logsBody").innerHTML="";for(const a of d.activations){const tr=document.createElement("tr");[a.time,a.prefix+"…",a.client_id||"غير متوفر",a.result].forEach(v=>{const td=document.createElement("td");td.textContent=v;tr.appendChild(td)});$("logsBody").appendChild(tr)}
+}catch(e){showMsg("keyMsg","تعذر تحميل البيانات: "+e.message,true)}}
+if(token)setLogged(true);
+</script></body></html>
